@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+</head>
+<body>
+  <h2>Login</h2>
+  
+  <input type="text" id="login_username" placeholder="Username"><br><br>
+  <input type="password" id="login_password" placeholder="Password"><br><br>
+  <button onclick="login()">Login</button>
+  
+  <div id="login_result" style="margin-top: 10px; color: green;"></div>
+  <p>Don't have an account? <a href="sign_up.html">Sign up here</a></p>
+
+  <script>
+    async function login() {
+      const payload = {
+        username: document.getElementById("login_username").value,
+        password: document.getElementById("login_password").value
+      };
+
+      const res = await fetch("http://localhost:5000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      document.getElementById("login_result").textContent =
+        data.status === "success" ? "✅ " + data.message : "❌ " + data.message;
+      
+      if (data.token) {
+        localStorage.setItem("token", data.token); // Save token
+        // Chuyển hướng đến trang index.html sau khi đăng nhập thành công
+        setTimeout(() => {
+          window.location.href = "index.html"; // Chuyển hướng sau 2 giây
+        }, 2000);
+      }
+    }
+  </script>
+</body>
+</html>

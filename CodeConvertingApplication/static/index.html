@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Code Converter</title>
+  <style>
+    .tab-content {
+      display: none;
+    }
+    .tab-button.active {
+      background-color: #ccc;
+    }
+    .details {
+      display: none;
+      padding: 10px;
+      background-color: #f1f1f1;
+      margin-top: 10px;
+    }
+    #loadingImage {
+      display: none;
+      width: 100px;
+      height: 100px;
+      margin-top: 10px;
+    }
+    #QR{
+       width: 500px;
+      height: 600px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1> Welcome, <span id="username"></span></h1>
+    <button onclick="showTab('convert')">Convert Code</button>
+    <button onclick="showTab('history')">View Conversion History</button>
+  </header>
+  
+  <div id="convert" class="tab-content">
+    <h2> Code Converter</h2>
+    <label>User ID:</label><br>
+    <input type="number" id="user_id" disabled><br><br>
+  
+    <label>Source Language:</label><br>
+    <input type="text" id="source_language" value="Python"><br><br>
+  
+    <label>Target Language:</label><br>
+    <input type="text" id="target_language" value="Java"><br><br>
+  
+    <label>Source Code:</label><br>
+    <textarea id="source_code" rows="6" cols="50">print("Hello")</textarea><br><br>
+  
+    <button onclick="convertCode()">Convert</button>
+  
+    <h3>Converted Code:</h3>
+    <pre id="result"></pre>
+
+    <!-- Số lần chuyển đổi và nút nạp thêm -->
+    <div>
+      <p>Number of conversions today: <span id="conversion_count">0</span></p>
+      <button id="reload_button" onclick="reloadConversion()">Reload</button>
+      <button id="unlock_button" onclick="unlockConversion()">Unlock More</button>
+    </div>
+
+    <!-- Thêm phần ảnh khi nạp thêm -->
+    <div id="loadingImage">
+      <img id="QR" src="./img/QRMOMO.jfif" alt="Loading...">
+    </div>
+  </div>
+
+  <div id="history" class="tab-content">
+    <h2>Conversion History</h2>
+    <ul id="history_list"></ul>
+  </div>
+
+  <script>
+    // Kiểm tra xem người dùng đã đăng nhập hay chưa và lấy JWT token từ localStorage
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decodedToken = JSON.parse(atob(token.split('.')[1]));
+      const userId = decodedToken.user_id;
+      const username = decodedToken.username;
+      
+      document.getElementById("username").textContent = username;
+      document.getElementById("user_id").value = userId;
+      
+      // Tải lịch sử chuyển đổi
+      loadHistory(userId);
+      // Tải số lần chuyển đổi
+      loadConversionCount(userId);
+    } else {
+      window.location.href = "login.html";  // Chuyển hướng tới trang login nếu chưa đăng nhập
+    }
+
+    function showTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(tabContent => {
+        tabContent.style.display = 'none';
+      });
+
+      document.getElementById(tab).style.display = 'block';
+    }
+
+    async function convertCode() {
+      const payload = {
+        user_id: document.getElementById("user_id").value,
+        source_language: document.getElementById("source_language").value,
+        target_language: document.getElementById("target_language").value,
+        source_code: document.getElementById("source_code").value
+      };
+
+      const res = await fetch("http://localhost:5000/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data.status === "success") {
+        document.getElementById("result").textContent = data.converted_code;
+      } else {
+        document.getElementById("result").textContent = "Lỗi: " + data.message;
+      }
+    }
+
+   async function loadConversionCount(userId) {
+  const res = await fetch(`http://localhost:5000/get_conversion_count?user_id=${userId}`);
+  const data = await res.json();
+  
+  if (data.status === "success") {
+    document.getElementById("conversion_count").textContent = data.remaining_conversions;
+
+    // Kiểm tra nếu số lần chuyển đổi đạt giới hạn, hiển thị nút "Unlock More"
+    if (data.remaining_conversions <= 0) {
+      document.getElementById("unlock_button").style.display = 'inline-block'; // Hiển thị nút nạp thêm
+    } else {
+      document.getElementById("unlock_button").style.display = 'none'; // Ẩn nút nếu chưa vượt giới hạn
+    }
+  } else {
+    console.error('Error fetching conversion count:', data.message); // In lỗi nếu có
+  }
+}
+
+    // Reload button
+    async function reloadConversion() {
+      // Gọi lại function loadConversionCount để lấy số lần chuyển đổi mới
+      loadConversionCount(document.getElementById("user_id").value);
+    }
+
+    // Nút nạp thêm
+    function unlockConversion() {
+      // Hiển thị ảnh loading khi người dùng nhấn nạp thêm
+      document.getElementById("loadingImage").style.display = "block";
+
+      // Sau một thời gian (giả sử là 3 giây), ẩn ảnh loading và hiển thị thông báo
+      setTimeout(() => {
+        document.getElementById("loadingImage").style.display = "none"; // Ẩn ảnh loading
+      }, 3000);
+    }
+
+    async function loadHistory(userId) {
+      const res = await fetch(`http://localhost:5000/conversion_history/${userId}`);
+      const data = await res.json();
+      const historyList = document.getElementById("history_list");
+
+      if (data.status === "success" && data.history.length > 0) {
+        data.history.forEach(record => {
+          const listItem = document.createElement("li");
+          const conversionId = record[0];
+          const sourceLang = record[1];
+          const targetLang = record[2];
+          const date = record[3];
+
+          // Tạo nội dung cho mỗi mục trong lịch sử
+          listItem.innerHTML = `
+            Conversion ID: ${conversionId}, From: ${sourceLang}, To: ${targetLang}, Date: ${date} 
+            <button onclick="viewDetails(${conversionId})">View Details</button>
+            <div id="details_${conversionId}" class="details">
+              <p><strong>Source Code:</strong><br><pre id="source_code_${conversionId}"></pre></p>
+              <p><strong>Converted Code:</strong><br><pre id="converted_code_${conversionId}"></pre></p>
+            </div>
+          `;
+          historyList.appendChild(listItem);
+        });
+      } else {
+        historyList.innerHTML = "<li>No history found</li>";
+      }
+    }
+
+    async function viewDetails(conversionId) {
+      const detailsDiv = document.getElementById(`details_${conversionId}`);
+      const sourceCodeElement = document.getElementById(`source_code_${conversionId}`);
+      const convertedCodeElement = document.getElementById(`converted_code_${conversionId}`);
+
+      // Kiểm tra xem đã mở chưa, nếu chưa mở thì gọi API
+      if (detailsDiv.style.display === "none") {
+        const res = await fetch(`http://localhost:5000/conversion_detail/${conversionId}`);
+        const data = await res.json();
+
+        if (data.status === "success") {
+          sourceCodeElement.textContent = data.source_code;
+          convertedCodeElement.textContent = data.converted_code;
+          detailsDiv.style.display = "block"; // Hiển thị nội dung
+        } else {
+          alert("Error: " + data.message);
+        }
+      } else {
+        detailsDiv.style.display = "none"; // Ẩn lại
+      }
+    }
+  </script>
+</body>
+</html>

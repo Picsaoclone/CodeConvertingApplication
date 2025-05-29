@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign Up</title>
+</head>
+<body>
+  <h2>Sign Up</h2>
+  
+  <input type="text" id="sign_up_username" placeholder="Username"><br><br>
+  <input type="email" id="sign_up_email" placeholder="Email"><br><br>
+  <input type="password" id="sign_up_password" placeholder="Password"><br><br>
+  <button onclick="signUp()">Sign Up</button>
+  
+  <div id="sign_up_result" style="margin-top: 10px; color: green;"></div>
+  <p>Already have an account? <a href="login.html">Login here</a></p>
+
+  <script>
+    async function signUp() {
+      const payload = {
+        username: document.getElementById("sign_up_username").value,
+        email: document.getElementById("sign_up_email").value,
+        password: document.getElementById("sign_up_password").value
+      };
+
+      // Gửi request đến /register
+      const res = await fetch("http://localhost:5000/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      document.getElementById("sign_up_result").textContent =
+        data.status === "success" ? "✅ " + data.message : "❌ " + data.message;
+
+      // Nếu đăng ký thành công, chuyển hướng đến trang login
+      if (data.status === "success") {
+        setTimeout(() => {
+          window.location.href = "login.html"; // Chuyển hướng đến trang login sau 2 giây
+        }, 2000);
+      }
+    }
+  </script>
+</body>
+</html>

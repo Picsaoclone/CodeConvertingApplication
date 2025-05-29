@@ -1,0 +1,37 @@
+// Code Conversion Workflow
+digraph {
+	A [label="User Login"]
+	B [label="Conversion Interface
+- Input source code
+- Choose languages"]
+	C [label="Frontend sends POST /convert
+(user_id, code, languages)"]
+	D [label="Flask Backend
+- Call OpenAI API
+- Receive converted code"]
+	E [label="Call Oracle Procedure StoreCodeConversion
+- Check source code validity
+- Check daily conversion limit
+- Insert conversion record
+- Log conversion history"]
+	F [label=Error]
+	G [label=Success]
+	H [label="Backend returns error"]
+	I [label="Backend returns success"]
+	J [label="Frontend displays error"]
+	K [label="Frontend displays converted code and status"]
+	L [label="Update conversion count"]
+	M [label="User views conversion history"]
+	A -> B
+	B -> C
+	C -> D
+	D -> E
+	E -> F [label="If error"]
+	E -> G [label="If success"]
+	F -> H
+	G -> I
+	H -> J
+	I -> K
+	K -> L
+	L -> M
+}
